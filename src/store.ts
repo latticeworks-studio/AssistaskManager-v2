@@ -11,6 +11,7 @@ export interface Task {
   createdAt: number;
   dueAt?: number;
   priority: Priority;
+  doneAt?: number;
   lastNotifiedAt?: number;
 }
 
@@ -27,6 +28,7 @@ interface TaskStore {
   hideAll: () => void;
   hideCritical: () => void;
   deleteAll: () => void;
+  reorderTask: (draggedId: string, beforeId: string | null) => void;
 }
 
 export const useTaskStore = create<TaskStore>()(
@@ -57,7 +59,9 @@ export const useTaskStore = create<TaskStore>()(
       toggleTask: (id) =>
         set((s) => ({
           tasks: s.tasks.map((t) =>
-            t.id === id ? { ...t, done: !t.done } : t
+            t.id === id
+              ? { ...t, done: !t.done, doneAt: !t.done ? Date.now() : undefined }
+              : t
           ),
         })),
 
@@ -81,24 +85,39 @@ export const useTaskStore = create<TaskStore>()(
 
       markAllDone: () =>
         set((s) => ({
-          tasks: s.tasks.map((t) => (!t.done ? { ...t, done: true } : t)),
+          tasks: s.tasks.map((t) => (!t.done ? { ...t, done: true, doneAt: Date.now() } : t)),
         })),
 
       hideAll: () =>
         set((s) => ({
-          tasks: s.tasks.map((t) => ({ ...t, done: true, hidden: true })),
+          tasks: s.tasks.map((t) => ({ ...t, done: true, hidden: true, doneAt: t.doneAt ?? Date.now() })),
         })),
 
       hideCritical: () =>
         set((s) => ({
           tasks: s.tasks.map((t) =>
             !t.done && (t.priority === "P0" || t.priority === "P1")
-              ? { ...t, done: true, hidden: true }
+              ? { ...t, done: true, hidden: true, doneAt: Date.now() }
               : t
           ),
         })),
 
       deleteAll: () => set({ tasks: [] }),
+
+      reorderTask: (draggedId, beforeId) =>
+        set((s) => {
+          const tasks = [...s.tasks];
+          const from = tasks.findIndex((t) => t.id === draggedId);
+          if (from === -1) return s;
+          const [item] = tasks.splice(from, 1);
+          if (beforeId === null) {
+            tasks.push(item);
+          } else {
+            const to = tasks.findIndex((t) => t.id === beforeId);
+            tasks.splice(to === -1 ? tasks.length : to, 0, item);
+          }
+          return { tasks };
+        }),
     }),
     {
       name: "assistask-tasks",

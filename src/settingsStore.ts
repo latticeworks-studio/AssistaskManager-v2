@@ -11,6 +11,7 @@ export interface Settings {
   titleColor: string;
   keepKeywords: boolean;
   isShiny: boolean;
+  isVu: boolean;
   notificationsEnabled: boolean;
   repeatNotifHours: number;
 }
@@ -31,6 +32,7 @@ export const useSettingsStore = create<SettingsStore>()(
       titleColor: "#52D7C6",
       keepKeywords: false,
       isShiny: false,
+      isVu: false,
       notificationsEnabled: true,
       repeatNotifHours: 1,
       update: (updates) => set((s) => ({ ...s, ...updates })),

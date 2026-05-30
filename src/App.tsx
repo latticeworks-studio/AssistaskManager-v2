@@ -3,6 +3,7 @@ import { useTaskStore, Priority, Task } from "./store";
 import { useNotifications } from "./useNotifications";
 import { parseTask, formatDetectedDate } from "./parseTask";
 import { useSettingsStore, formatInZone, LOCAL_ZONE } from "./settingsStore";
+import { useWindowPersistence } from "./useWindowPersistence";
 import PixelText from "./PixelText";
 import SlideMenu from "./SlideMenu";
 import StandupView from "./views/StandupView";
@@ -54,9 +55,13 @@ interface TaskRowProps {
   isEditing: boolean;
   onStartEdit: () => void;
   onStopEdit: () => void;
+  draggable?: boolean;
+  isDragging?: boolean;
+  isDragOver?: boolean;
+  onHandleMouseDown?: (e: React.MouseEvent) => void;
 }
 
-function TaskRow({ task, isEditing, onStartEdit, onStopEdit }: TaskRowProps) {
+function TaskRow({ task, isEditing, onStartEdit, onStopEdit, draggable: isDraggable, isDragging, isDragOver, onHandleMouseDown }: TaskRowProps) {
   const { toggleTask, deleteTask, updateTask } = useTaskStore();
   const overdue = !task.done && task.dueAt !== undefined && task.dueAt < Date.now();
 
@@ -98,7 +103,7 @@ function TaskRow({ task, isEditing, onStartEdit, onStopEdit }: TaskRowProps) {
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 bg-transparent text-vscode-text caret-vscode-blue focus:outline-none text-sm"
+            className="flex-1 bg-transparent text-vscode-text caret-vscode-accent focus:outline-none text-sm"
           />
           <button onClick={save} className="text-vscode-green hover:text-vscode-text transition-colors flex-shrink-0" aria-label="Save">
             <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -143,21 +148,37 @@ function TaskRow({ task, isEditing, onStartEdit, onStopEdit }: TaskRowProps) {
 
   return (
     <div
-      className={`group flex items-start gap-2 px-3 py-2 border-b border-vscode-border hover:bg-vscode-panel transition-colors cursor-pointer border-l-2 ${
+      data-task-id={isDraggable ? task.id : undefined}
+      className={`relative group flex items-start gap-2 px-3 py-2 border-b border-vscode-border hover:bg-vscode-panel transition-colors cursor-pointer border-l-2 ${
         task.done
           ? "opacity-40 border-l-transparent"
           : overdue
           ? "border-l-[#f44747] bg-[rgba(244,71,71,0.04)]"
           : "border-l-transparent"
-      }`}
+      } ${isDragging ? "opacity-40" : ""}`}
       onClick={onStartEdit}
     >
+      {isDragOver && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-vscode-accent pointer-events-none" />
+      )}
+      {isDraggable && (
+        <div
+          className="mt-[4px] flex-shrink-0 opacity-0 group-hover:opacity-40 hover:!opacity-100 cursor-grab active:cursor-grabbing transition-opacity"
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onHandleMouseDown?.(e); }}
+        >
+          <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor" className="text-vscode-muted">
+            <circle cx="2" cy="2" r="1.2"/><circle cx="6" cy="2" r="1.2"/>
+            <circle cx="2" cy="6" r="1.2"/><circle cx="6" cy="6" r="1.2"/>
+            <circle cx="2" cy="10" r="1.2"/><circle cx="6" cy="10" r="1.2"/>
+          </svg>
+        </div>
+      )}
       <div className="mt-[5px] flex-shrink-0">
         <div className={`w-1.5 h-1.5 rounded-full ${PRIORITY_DOT[task.priority]}`} />
       </div>
       <button
         onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }}
-        className="mt-[2px] flex-shrink-0 w-4 h-4 border border-vscode-muted rounded-sm flex items-center justify-center hover:border-vscode-blue transition-colors"
+        className="mt-[2px] flex-shrink-0 w-4 h-4 border border-vscode-muted rounded-sm flex items-center justify-center hover:border-vscode-accent transition-colors"
         aria-label="Toggle task"
       >
         {task.done && (
@@ -188,7 +209,32 @@ function TaskRow({ task, isEditing, onStartEdit, onStopEdit }: TaskRowProps) {
 }
 
 function AppHeader() {
-  const { showTimezones, localName, tz1Name, tz1Zone, tz2Name, tz2Zone, titleColor, isShiny } = useSettingsStore();
+  const { showTimezones, localName, tz1Name, tz1Zone, tz2Name, tz2Zone, titleColor, isShiny, isVu } = useSettingsStore();
+  const [amplitude, setAmplitude] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isVu) {
+      setAmplitude(null);
+      import("@tauri-apps/api/core").then(({ invoke }) => invoke("stop_vu").catch(() => {}));
+      return;
+    }
+
+    let unlisten: (() => void) | undefined;
+
+    Promise.all([
+      import("@tauri-apps/api/core"),
+      import("@tauri-apps/api/event"),
+    ]).then(([{ invoke }, { listen }]) => {
+      listen<number>("vu-data", (e) => setAmplitude(e.payload)).then((fn) => { unlisten = fn; });
+      invoke("start_vu").catch(() => useSettingsStore.getState().update({ isVu: false }));
+    });
+
+    return () => {
+      unlisten?.();
+      setAmplitude(null);
+      import("@tauri-apps/api/core").then(({ invoke }) => invoke("stop_vu").catch(() => {}));
+    };
+  }, [isVu]);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -206,7 +252,7 @@ function AppHeader() {
 
   return (
     <div className="flex flex-col items-center py-3 border-b border-vscode-border select-none gap-1.5">
-      <PixelText text="ASSISTASK" pixelSize={3} color={titleColor || "#52D7C6"} animated={isShiny} />
+      <PixelText text="ASSISTASK" pixelSize={3} color={titleColor || "#52D7C6"} animated={isShiny} amplitude={amplitude} />
       <span className="text-[10px] text-vscode-muted tracking-wide">{today}</span>
       {showTimezones && (
         <div className="flex items-center gap-2 mt-1 text-xs text-vscode-muted">
@@ -231,7 +277,9 @@ function AppHeader() {
 }
 
 const SLASH_COMMANDS = [
+  { cmd: "/search",          desc: "filter tasks by text — keep typing to search" },
   { cmd: "/shiny",           desc: "toggle rainbow wave on ASSISTASK" },
+  { cmd: "/vu",              desc: "toggle VU meter — pixels react to your mic" },
   { cmd: "/alldone",         desc: "mark all tasks as done" },
   { cmd: "/clearall",        desc: "send all tasks to completed" },
   { cmd: "/clear critical",  desc: "send critical tasks to completed" },
@@ -239,7 +287,7 @@ const SLASH_COMMANDS = [
 ];
 
 function TasksView() {
-  const { tasks, addTask, markAllDone, hideAll, hideCritical, deleteAll } = useTaskStore();
+  const { tasks, addTask, markAllDone, hideAll, hideCritical, deleteAll, reorderTask } = useTaskStore();
   const { keepKeywords } = useSettingsStore();
   const [input, setInput] = useState("");
   const [dueTime, setDueTime] = useState("");
@@ -247,27 +295,73 @@ function TasksView() {
   const [showDue, setShowDue] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [paletteIdx, setPaletteIdx] = useState(0);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragIdRef = useRef<string | null>(null);
+  const dropIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!draggingId) return;
+
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
+
+    const onMove = (e: MouseEvent) => {
+      const els = document.elementsFromPoint(e.clientX, e.clientY);
+      const el = els.find((n) => (n as HTMLElement).dataset?.taskId) as HTMLElement | undefined;
+      const id = el?.dataset.taskId ?? null;
+      const target = id === draggingId ? null : id;
+      dropIdRef.current = target;
+      setDragOverId(target);
+    };
+
+    const onUp = () => {
+      if (dragIdRef.current && dropIdRef.current) {
+        reorderTask(dragIdRef.current, dropIdRef.current);
+      }
+      dragIdRef.current = null;
+      dropIdRef.current = null;
+      setDraggingId(null);
+      setDragOverId(null);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [draggingId, reorderTask]);
   const inputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<string[]>([]);
   const historyIdxRef = useRef<number>(-1);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
-  const slashQuery = input.startsWith("/") ? input.toLowerCase() : null;
+  const isSearchMode = input.toLowerCase().startsWith("/search");
+  const searchText = isSearchMode ? input.slice(7).trim().toLowerCase() : "";
+
+  const slashQuery = input.startsWith("/") && !isSearchMode ? input.toLowerCase() : null;
   const filteredCmds = slashQuery !== null
     ? SLASH_COMMANDS.filter((c) => c.cmd.startsWith(slashQuery))
+    : isSearchMode && input.toLowerCase() === "/search"
+    ? SLASH_COMMANDS.filter((c) => c.cmd === "/search")
     : [];
-  const showPalette = filteredCmds.length > 0;
+  const showPalette = filteredCmds.length > 0 && !(isSearchMode && searchText.length > 0);
 
   // Keep paletteIdx in bounds when filtered list shrinks
   useEffect(() => {
     setPaletteIdx(0);
   }, [filteredCmds.length]);
 
-  const parsed = parseTask(showPalette ? "" : input, keepKeywords);
+  const parsed = parseTask(showPalette || isSearchMode ? "" : input, keepKeywords);
   const effectivePriority = parsed.priority ?? priority;
   const effectiveDue = parsed.dueAt ?? (dueTime ? new Date(dueTime).getTime() : undefined);
-  const hasHint = !showPalette && (!!parsed.priority || !!parsed.dueAt);
+  const hasHint = !showPalette && !isSearchMode && (!!parsed.priority || !!parsed.dueAt);
 
   const resetInput = () => {
     setInput("");
@@ -282,6 +376,7 @@ function TasksView() {
     const cmd = parts[0];
     const arg = parts[1];
     if (cmd === "shiny")    { const { isShiny, update } = useSettingsStore.getState(); update({ isShiny: !isShiny }); return true; }
+    if (cmd === "vu")       { const { isVu, update } = useSettingsStore.getState(); update({ isVu: !isVu }); return true; }
     if (cmd === "alldone")  { markAllDone(); return true; }
     if (cmd === "clearall") { hideAll(); return true; }
     if (cmd === "deleteall"){ deleteAll(); return true; }
@@ -294,6 +389,12 @@ function TasksView() {
     if (!raw) return;
 
     const effectiveRaw = showPalette ? filteredCmds[paletteIdx].cmd : raw;
+
+    // /search just primes the input for typing
+    if (effectiveRaw === "/search") {
+      setInput("/search ");
+      return;
+    }
 
     if (effectiveRaw.startsWith("/")) {
       if (runSlashCommand(effectiveRaw)) {
@@ -344,8 +445,11 @@ function TasksView() {
   const pending = tasks.filter((t) => !t.done);
   const done = tasks.filter((t) => t.done && !t.hidden);
 
+  const matchSearch = (t: Task) =>
+    !searchText || t.text.toLowerCase().includes(searchText);
+
   const critical = pending
-    .filter((t) => t.priority === "P0" || t.priority === "P1")
+    .filter((t) => (t.priority === "P0" || t.priority === "P1") && matchSearch(t))
     .sort((a, b) => {
       if (a.dueAt && b.dueAt) return a.dueAt - b.dueAt;
       if (a.dueAt) return -1;
@@ -354,8 +458,7 @@ function TasksView() {
     });
 
   const regular = pending
-    .filter((t) => t.priority !== "P0" && t.priority !== "P1")
-    .sort((a, b) => b.createdAt - a.createdAt);
+    .filter((t) => t.priority !== "P0" && t.priority !== "P1" && matchSearch(t));
 
   const SectionDivider = ({ label, accent }: { label: string; accent?: string }) => (
     <div className="flex items-center gap-2 px-3 py-1.5">
@@ -371,6 +474,13 @@ function TasksView() {
     <>
       <div className="flex-1 overflow-y-auto">
         <AppHeader />
+        {searchText && (
+          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-vscode-border bg-vscode-bg text-xs">
+            <span className="text-vscode-muted">searching</span>
+            <span className="text-vscode-accent font-mono">"{searchText}"</span>
+            <span className="text-vscode-muted ml-auto">{critical.length + regular.length} result{critical.length + regular.length !== 1 ? "s" : ""}</span>
+          </div>
+        )}
         {tasks.length === 0 && (
           <div className="flex items-center justify-center h-32 text-vscode-muted text-xs">
             no tasks — type below and press enter
@@ -390,8 +500,19 @@ function TasksView() {
           <>
             <SectionDivider label="tasks" />
             {regular.map((t) => (
-              <TaskRow key={t.id} task={t} isEditing={editingId === t.id} onStartEdit={() => setEditingId(t.id)} onStopEdit={() => setEditingId(null)} />
+              <TaskRow
+                key={t.id}
+                task={t}
+                isEditing={editingId === t.id}
+                onStartEdit={() => setEditingId(t.id)}
+                onStopEdit={() => setEditingId(null)}
+                draggable
+                isDragging={draggingId === t.id}
+                isDragOver={dragOverId === t.id}
+                onHandleMouseDown={() => { dragIdRef.current = t.id; setDraggingId(t.id); }}
+              />
             ))}
+            <div className="h-2" />
           </>
         )}
 
@@ -446,7 +567,7 @@ function TasksView() {
                   i === paletteIdx ? "bg-vscode-panel" : "hover:bg-vscode-panel"
                 }`}
               >
-                <span className={`text-xs font-mono ${i === paletteIdx ? "text-vscode-blue" : "text-vscode-muted"}`}>
+                <span className={`text-xs font-mono ${i === paletteIdx ? "text-vscode-accent" : "text-vscode-muted"}`}>
                   {item.cmd}
                 </span>
                 <span className="text-xs text-vscode-muted truncate">{item.desc}</span>
@@ -472,7 +593,7 @@ function TasksView() {
         <div className="flex items-center gap-2 px-3 py-2">
           <button
             onClick={() => setShowDue((v) => !v)}
-            className={`flex-shrink-0 text-xs transition-colors ${showDue ? "text-vscode-blue" : "text-vscode-muted hover:text-vscode-text"}`}
+            className={`flex-shrink-0 text-xs transition-colors ${showDue ? "text-vscode-accent" : "text-vscode-muted hover:text-vscode-text"}`}
             title="Set due time / priority"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -487,7 +608,7 @@ function TasksView() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="add task…"
-            className="flex-1 bg-transparent text-vscode-text placeholder-vscode-muted caret-vscode-blue"
+            className="flex-1 bg-transparent text-vscode-text placeholder-vscode-muted caret-vscode-accent"
           />
           <span className="text-xs text-vscode-muted">↵</span>
         </div>
@@ -498,6 +619,7 @@ function TasksView() {
 
 export default function App() {
   useNotifications();
+  useWindowPersistence();
 
   const { tasks, hideDone } = useTaskStore();
   const [view, setView] = useState<View>("tasks");
@@ -525,23 +647,24 @@ export default function App() {
               <rect x="1" y="10.3" width="12" height="1.2" rx="0.6" fill="currentColor" />
             </svg>
           </button>
-          <div className="flex items-center gap-1">
-            <div className="flex items-center gap-0.5">
+          <div data-tauri-drag-region className="flex items-center gap-1">
+            <div data-tauri-drag-region className="flex items-center gap-0.5">
               {["Ctrl", "Shift", "A"].map((k) => (
                 <span
                   key={k}
+                  data-tauri-drag-region
                   className="text-[10px] text-vscode-muted border border-vscode-border rounded px-1 py-px leading-none"
                 >
                   {k}
                 </span>
               ))}
             </div>
-            <span className="text-[10px] text-vscode-muted">to show / hide</span>
+            <span data-tauri-drag-region className="text-[10px] text-vscode-muted">to show / hide</span>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-vscode-muted">
-          {overdueCount > 0 && <span className="text-vscode-red">{overdueCount} overdue</span>}
-          <span>{pending.length} pending</span>
+        <div data-tauri-drag-region className="flex items-center gap-2 text-xs text-vscode-muted">
+          {overdueCount > 0 && <span data-tauri-drag-region className="text-vscode-red">{overdueCount} overdue</span>}
+          <span data-tauri-drag-region>{pending.length} pending</span>
           {tasks.filter((t) => t.done && !t.hidden).length > 0 && (
             <button onClick={hideDone} className="hover:text-vscode-text transition-colors">
               clear done

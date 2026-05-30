@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useTaskStore } from "../store";
 import { useSettingsStore, ALL_TIMEZONES } from "../settingsStore";
+import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -22,6 +23,28 @@ export default function SettingsView() {
 
   const [hexInput, setHexInput] = useState(titleColor);
   useEffect(() => { setHexInput(titleColor); }, [titleColor]);
+
+  const [autostart, setAutostart] = useState(false);
+  useEffect(() => {
+    isEnabled().then(setAutostart).catch(() => {});
+  }, []);
+  const toggleAutostart = async (val: boolean) => {
+    try {
+      val ? await enable() : await disable();
+      setAutostart(val);
+    } catch {}
+  };
+
+  const handleExport = () => {
+    const data = JSON.stringify(useTaskStore.getState().tasks, null, 2);
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `assistask-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleHexChange = (val: string) => {
     setHexInput(val);
@@ -62,6 +85,16 @@ export default function SettingsView() {
             reset
           </button>
         </Field>
+
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={autostart}
+            onChange={(e) => toggleAutostart(e.target.checked)}
+            className="accent-vscode-accent w-3.5 h-3.5"
+          />
+          <span className="text-sm text-vscode-text">Launch at startup</span>
+        </label>
 
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
@@ -173,11 +206,14 @@ export default function SettingsView() {
       {/* Data */}
       <div className="flex flex-col gap-2">
         <div className="text-xs text-vscode-muted uppercase tracking-wide">data</div>
-        <button onClick={clearDone} className="text-left text-sm text-vscode-text hover:text-vscode-blue transition-colors py-0.5">
+        <button onClick={clearDone} className="text-left text-sm text-vscode-text hover:text-vscode-accent transition-colors py-0.5">
           Clear completed tasks
         </button>
         <button onClick={clearAll} className="text-left text-sm text-vscode-text hover:text-vscode-red transition-colors py-0.5">
           Clear all tasks
+        </button>
+        <button onClick={handleExport} className="text-left text-sm text-vscode-text hover:text-vscode-accent transition-colors py-0.5">
+          Export tasks as JSON
         </button>
       </div>
 

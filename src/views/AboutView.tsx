@@ -2,7 +2,7 @@ export default function AboutView() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 text-center">
       <div>
-        <div className="text-vscode-blue text-base tracking-widest uppercase mb-1">Assistask</div>
+        <div className="text-vscode-accent text-base tracking-widest uppercase mb-1">Assistask</div>
         <div className="text-xs text-vscode-muted">v2.0.0</div>
       </div>
       <p className="text-xs text-vscode-muted leading-relaxed max-w-xs">

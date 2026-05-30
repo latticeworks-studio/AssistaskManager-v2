@@ -101,8 +101,8 @@ export default function SlideMenu({ open, onClose, onSelect, currentView }: Prop
               onClick={() => { onSelect(view); onClose(); }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                 currentView === view
-                  ? "text-vscode-blue bg-vscode-panel"
-                  : "text-vscode-text hover:bg-vscode-panel hover:text-vscode-blue"
+                  ? "text-vscode-accent bg-vscode-panel"
+                  : "text-vscode-text hover:bg-vscode-panel hover:text-vscode-accent"
               }`}
             >
               <span className="flex-shrink-0">{icon}</span>
