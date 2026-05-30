@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTaskStore } from "./store";
+import { useSettingsStore } from "./settingsStore";
 
-// Tauri notification plugin — falls back gracefully in browser dev mode
 async function sendNotification(title: string, body: string) {
   try {
     const { isPermissionGranted, requestPermission, sendNotification } =
@@ -13,7 +13,6 @@ async function sendNotification(title: string, body: string) {
     }
     if (granted) sendNotification({ title, body });
   } catch {
-    // Dev/browser fallback
     if ("Notification" in window) {
       if (Notification.permission === "granted") {
         new Notification(title, { body });
@@ -28,23 +27,31 @@ async function sendNotification(title: string, body: string) {
 
 export function useNotifications() {
   const { tasks, markNotified } = useTaskStore();
+  const { notificationsEnabled, repeatNotifHours } = useSettingsStore();
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (!notificationsEnabled) return;
+
+    const check = () => {
       const now = Date.now();
+      const repeatMs = repeatNotifHours * 60 * 60 * 1000;
+
       tasks.forEach((task) => {
-        if (
-          !task.done &&
-          !task.notified &&
-          task.dueAt &&
-          task.dueAt <= now
-        ) {
-          sendNotification("⏰ Task overdue", task.text);
-          markNotified(task.id);
+        if (task.done || !task.dueAt || task.dueAt > now) return;
+
+        const neverNotified = !task.lastNotifiedAt;
+        const repeatDue = task.lastNotifiedAt && (now - task.lastNotifiedAt) >= repeatMs;
+
+        if (neverNotified || repeatDue) {
+          const label = neverNotified ? "⏰ Task due" : "⏰ Still overdue";
+          sendNotification(label, task.text);
+          markNotified(task.id, now);
         }
       });
-    }, 30_000); // check every 30 seconds
+    };
 
-    return () => clearInterval(interval);
-  }, [tasks, markNotified]);
+    check(); // run immediately on mount / settings change
+    const id = setInterval(check, 30_000);
+    return () => clearInterval(id);
+  }, [tasks, markNotified, notificationsEnabled, repeatNotifHours]);
 }

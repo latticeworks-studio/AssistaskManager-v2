@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -18,7 +20,16 @@ pub fn run() {
                 Some(Modifiers::CONTROL | Modifiers::SHIFT),
                 Code::KeyA,
             );
+            let last_toggle = Arc::new(Mutex::new(
+                Instant::now() - Duration::from_secs(1),
+            ));
             app.global_shortcut().on_shortcut(shortcut, move |_app, _sh, _event| {
+                let mut last = last_toggle.lock().unwrap();
+                if last.elapsed() < Duration::from_millis(300) {
+                    return;
+                }
+                *last = Instant::now();
+                drop(last);
                 toggle_window(&handle);
             })?;
 
