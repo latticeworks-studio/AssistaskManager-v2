@@ -187,7 +187,7 @@ function TaskRow({ task, isEditing, onStartEdit, onStopEdit, draggable: isDragga
           </svg>
         )}
       </button>
-      <span className={`flex-1 leading-relaxed break-words text-sm ${task.done ? "line-through text-vscode-muted" : "text-vscode-text"}`}>
+      <span className={`flex-1 leading-relaxed break-all min-w-0 text-sm ${task.done ? "line-through text-vscode-muted" : "text-vscode-text"}`}>
         {task.text}
       </span>
       {task.dueAt && (
@@ -472,15 +472,15 @@ function TasksView() {
 
   return (
     <>
+      <AppHeader />
+      {searchText && (
+        <div className="flex items-center gap-2 px-3 py-1.5 border-b border-vscode-border bg-vscode-bg text-xs flex-shrink-0">
+          <span className="text-vscode-muted">searching</span>
+          <span className="text-vscode-accent font-mono">"{searchText}"</span>
+          <span className="text-vscode-muted ml-auto">{critical.length + regular.length} result{critical.length + regular.length !== 1 ? "s" : ""}</span>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto">
-        <AppHeader />
-        {searchText && (
-          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-vscode-border bg-vscode-bg text-xs">
-            <span className="text-vscode-muted">searching</span>
-            <span className="text-vscode-accent font-mono">"{searchText}"</span>
-            <span className="text-vscode-muted ml-auto">{critical.length + regular.length} result{critical.length + regular.length !== 1 ? "s" : ""}</span>
-          </div>
-        )}
         {tasks.length === 0 && (
           <div className="flex items-center justify-center h-32 text-vscode-muted text-xs">
             no tasks — type below and press enter
