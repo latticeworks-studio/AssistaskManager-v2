@@ -1,6 +1,10 @@
 {
   "docs": [
-    { "title": "Getting Started", "file": "getting-started.md" },
-    { "title": "Task Syntax",     "file": "task-syntax.md" }
+    { "title": "Getting Started",    "file": "getting-started.md" },
+    { "title": "Task Syntax",        "file": "task-syntax.md" },
+    { "title": "Slash Commands",     "file": "slash-commands.md" },
+    { "title": "Keyboard Shortcuts", "file": "keyboard-shortcuts.md" },
+    { "title": "Views & Features",   "file": "views-and-features.md" },
+    { "title": "Settings",           "file": "settings.md" }
   ]
 }
