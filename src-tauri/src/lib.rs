@@ -15,6 +15,16 @@ unsafe impl Send for VuState {}
 unsafe impl Sync for VuState {}
 
 #[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    std::process::Command::new("cmd")
+        .args(["/c", "start", "", &url])
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 fn start_vu(state: tauri::State<'_, VuState>, window: tauri::WebviewWindow) -> Result<(), String> {
     // Prefer WASAPI for loopback capture on Windows
     let host = {
@@ -86,7 +96,7 @@ fn stop_vu(state: tauri::State<'_, VuState>) {
 pub fn run() {
     tauri::Builder::default()
         .manage(VuState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![start_vu, stop_vu])
+        .invoke_handler(tauri::generate_handler![open_url, start_vu, stop_vu])
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -104,7 +114,7 @@ pub fn run() {
             ));
             app.global_shortcut().on_shortcut(shortcut, move |_app, _sh, _event| {
                 let mut last = last_toggle.lock().unwrap();
-                if last.elapsed() < Duration::from_millis(300) {
+                if last.elapsed() < Duration::from_millis(500) {
                     return;
                 }
                 *last = Instant::now();
