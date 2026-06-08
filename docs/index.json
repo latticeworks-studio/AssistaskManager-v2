@@ -1,0 +1,6 @@
+{
+  "docs": [
+    { "title": "Getting Started", "file": "getting-started.md" },
+    { "title": "Task Syntax",     "file": "task-syntax.md" }
+  ]
+}
