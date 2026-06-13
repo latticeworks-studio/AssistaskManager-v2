@@ -59,6 +59,7 @@ System notifications fire when a task hits its due time, with a configurable rep
 - **Notifications** — enable/disable + repeat interval for overdue tasks
 - **Launch at startup** — auto-start with Windows
 - **Export** — download all tasks as JSON
+- **List code** — copy your active tasks as a portable code string; paste it on any device to restore with Replace (swap) or Append (merge)
 
 ---
 
