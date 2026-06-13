@@ -29,6 +29,7 @@ interface TaskStore {
   hideCritical: () => void;
   deleteAll: () => void;
   reorderTask: (draggedId: string, beforeId: string | null) => void;
+  importTasks: (incoming: Task[], mode: "replace" | "append") => void;
 }
 
 export const useTaskStore = create<TaskStore>()(
@@ -103,6 +104,22 @@ export const useTaskStore = create<TaskStore>()(
         })),
 
       deleteAll: () => set({ tasks: [] }),
+
+      importTasks: (incoming, mode) =>
+        set((s) => ({
+          tasks:
+            mode === "replace"
+              ? incoming
+              : [
+                  // Existing tasks: restore any that are done but appear as active in the import
+                  ...s.tasks.map((t) => {
+                    const match = incoming.find((i) => i.id === t.id);
+                    return match && t.done ? match : t;
+                  }),
+                  // Brand-new tasks not in the store at all
+                  ...incoming.filter((t) => !s.tasks.some((e) => e.id === t.id)),
+                ],
+        })),
 
       reorderTask: (draggedId, beforeId) =>
         set((s) => {

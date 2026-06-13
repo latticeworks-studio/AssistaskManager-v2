@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useTaskStore } from "../store";
+import { useTaskStore, Task } from "../store";
 import { useSettingsStore, ALL_TIMEZONES } from "../settingsStore";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 
@@ -17,8 +17,26 @@ const selectCls = "flex-1 bg-vscode-bg border border-vscode-border rounded px-2 
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
+function encodeListCode(tasks: Task[]): string {
+  const json = JSON.stringify(tasks);
+  const bytes = new TextEncoder().encode(json);
+  const bin = Array.from(bytes, (b) => String.fromCharCode(b)).join("");
+  return btoa(bin);
+}
+
+function decodeListCode(code: string): Task[] {
+  const bin = atob(code.trim());
+  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  const json = new TextDecoder().decode(bytes);
+  const data = JSON.parse(json);
+  if (!Array.isArray(data)) throw new Error("not an array");
+  return data.filter(
+    (t) => t.id && t.text && typeof t.done === "boolean" && t.priority && t.createdAt
+  ) as Task[];
+}
+
 export default function SettingsView() {
-  const { tasks: allTasks, clearDone } = useTaskStore();
+  const { tasks: allTasks, clearDone, importTasks } = useTaskStore();
   const { showTimezones, localName, tz1Name, tz1Zone, tz2Name, tz2Zone, titleColor, keepKeywords, notificationsEnabled, repeatNotifHours, update } = useSettingsStore();
 
   const [hexInput, setHexInput] = useState(titleColor);
@@ -54,6 +72,38 @@ export default function SettingsView() {
   const clearAll = () => {
     const store = useTaskStore.getState();
     store.tasks.forEach((t) => store.deleteTask(t.id));
+  };
+
+  const [copied, setCopied] = useState(false);
+  const handleCopyCode = async () => {
+    const code = encodeListCode(useTaskStore.getState().tasks.filter((t) => !t.done));
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const [importCode, setImportCode] = useState("");
+  const [importStage, setImportStage] = useState<"idle" | "confirm" | "error">("idle");
+  const [importError, setImportError] = useState("");
+  const [pendingTasks, setPendingTasks] = useState<Task[]>([]);
+
+  const handleImport = () => {
+    try {
+      const tasks = decodeListCode(importCode);
+      if (tasks.length === 0) throw new Error("No valid tasks found");
+      setPendingTasks(tasks);
+      setImportStage("confirm");
+    } catch {
+      setImportError("Invalid list code — couldn't read tasks.");
+      setImportStage("error");
+    }
+  };
+
+  const applyImport = (mode: "replace" | "append") => {
+    importTasks(pendingTasks, mode);
+    setImportCode("");
+    setPendingTasks([]);
+    setImportStage("idle");
   };
 
   return (
@@ -215,6 +265,70 @@ export default function SettingsView() {
         <button onClick={handleExport} className="text-left text-sm text-vscode-text hover:text-vscode-accent transition-colors py-0.5">
           Export tasks as JSON
         </button>
+
+        <div className="border-t border-vscode-border pt-2 mt-1 flex flex-col gap-2">
+          <div className="text-xs text-vscode-muted">List code</div>
+          <button
+            onClick={handleCopyCode}
+            className="text-left text-sm text-vscode-text hover:text-vscode-accent transition-colors py-0.5"
+          >
+            {copied ? "Copied!" : "Copy list code"}
+          </button>
+
+          <div className="text-xs text-vscode-muted mt-1">Import list code</div>
+          <textarea
+            value={importCode}
+            onChange={(e) => { setImportCode(e.target.value); setImportStage("idle"); }}
+            placeholder="Paste list code here…"
+            rows={3}
+            className="w-full bg-vscode-bg border border-vscode-border rounded px-2 py-1 text-xs text-vscode-text focus:border-vscode-accent focus:outline-none resize-none font-mono"
+          />
+
+          {importStage === "idle" && (
+            <button
+              onClick={handleImport}
+              disabled={!importCode.trim()}
+              className="text-left text-sm text-vscode-text hover:text-vscode-accent transition-colors py-0.5 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              Import
+            </button>
+          )}
+
+          {importStage === "error" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-vscode-red">{importError}</span>
+              <button onClick={() => setImportStage("idle")} className="text-xs text-vscode-muted hover:text-vscode-text">retry</button>
+            </div>
+          )}
+
+          {importStage === "confirm" && (
+            <div className="flex flex-col gap-2">
+              <span className="text-xs text-vscode-muted">
+                {pendingTasks.length} task{pendingTasks.length !== 1 ? "s" : ""} found — replace existing or append?
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => applyImport("replace")}
+                  className="text-xs px-3 py-1 rounded border border-vscode-red text-vscode-red hover:bg-vscode-red hover:text-white transition-colors"
+                >
+                  Replace
+                </button>
+                <button
+                  onClick={() => applyImport("append")}
+                  className="text-xs px-3 py-1 rounded border border-vscode-accent text-vscode-accent hover:bg-vscode-accent hover:text-vscode-bg transition-colors"
+                >
+                  Append
+                </button>
+                <button
+                  onClick={() => setImportStage("idle")}
+                  className="text-xs text-vscode-muted hover:text-vscode-text"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
