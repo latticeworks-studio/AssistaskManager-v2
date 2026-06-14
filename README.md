@@ -34,6 +34,9 @@ System notifications fire when a task hits its due time, with a configurable rep
 **All Completed view**
 "Clear done" hides tasks from the main view without deleting them. Browse, search, and permanently clear from the dedicated Completed view.
 
+**My Lists**
+Save your active task list as a named snapshot at any time. Browse all saved snapshots from the My Lists view and restore any of them with Replace (swap out your current tasks) or Append (merge in without losing what's there). Snapshots persist across restarts and reboots. For quick transfers between devices, copy the list code directly from Settings and paste it on the other machine.
+
 **Global shortcut**
 `Ctrl+Shift+A` shows or hides the window from anywhere. Left-click the tray icon does the same. The window hides to tray on close — it never quits unless you tell it to.
 
@@ -59,7 +62,7 @@ System notifications fire when a task hits its due time, with a configurable rep
 - **Notifications** — enable/disable + repeat interval for overdue tasks
 - **Launch at startup** — auto-start with Windows
 - **Export** — download all tasks as JSON
-- **List code** — copy your active tasks as a portable code string; paste it on any device to restore with Replace (swap) or Append (merge)
+- **List code** — copy active tasks as a portable string or save as a named snapshot; restore via My Lists with Replace or Append
 
 ---
 
