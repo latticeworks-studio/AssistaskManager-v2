@@ -15,6 +15,11 @@ unsafe impl Send for VuState {}
 unsafe impl Sync for VuState {}
 
 #[tauri::command]
+fn quit_app() {
+    std::process::exit(0);
+}
+
+#[tauri::command]
 fn open_url(url: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     std::process::Command::new("cmd")
@@ -96,7 +101,7 @@ fn stop_vu(state: tauri::State<'_, VuState>) {
 pub fn run() {
     tauri::Builder::default()
         .manage(VuState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![open_url, start_vu, stop_vu])
+        .invoke_handler(tauri::generate_handler![quit_app, open_url, start_vu, stop_vu])
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())

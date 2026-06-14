@@ -9,9 +9,10 @@ import SlideMenu from "./SlideMenu";
 import StandupView from "./views/StandupView";
 import CompletedView from "./views/CompletedView";
 import SettingsView from "./views/SettingsView";
+import SnapshotsView from "./views/SnapshotsView";
 import AboutView from "./views/AboutView";
 
-export type View = "tasks" | "standup" | "completed" | "settings" | "about";
+export type View = "tasks" | "standup" | "completed" | "settings" | "lists" | "about";
 
 
 export const PRIORITY_COLORS: Record<Priority, string> = {
@@ -678,7 +679,8 @@ export default function App() {
         {view === "tasks" && <TasksView />}
         {view === "standup" && <StandupView />}
         {view === "completed" && <CompletedView />}
-        {view === "settings" && <SettingsView />}
+        {view === "settings" && <SettingsView onNavigate={setView} />}
+        {view === "lists" && <SnapshotsView />}
         {view === "about" && <AboutView />}
       </div>
 

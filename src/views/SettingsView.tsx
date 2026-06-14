@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useTaskStore, Task } from "../store";
 import { useSettingsStore, ALL_TIMEZONES } from "../settingsStore";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
+import { useSnapshots } from "../useSnapshots";
+import { View } from "../App";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -12,8 +14,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const inputCls = "bg-vscode-bg border border-vscode-border rounded px-2 py-1 text-xs text-vscode-text focus:border-vscode-accent focus:outline-none";
-const selectCls = "flex-1 bg-vscode-bg border border-vscode-border rounded px-2 py-1 text-xs text-vscode-text focus:border-vscode-accent focus:outline-none";
+const inputCls = "bg-vscode-bg border border-neutral-600 rounded px-2 py-1 text-xs text-vscode-text focus:border-vscode-accent focus:outline-none";
+const selectCls = "flex-1 bg-vscode-bg border border-neutral-600 rounded px-2 py-1 text-xs text-vscode-text focus:border-vscode-accent focus:outline-none";
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
@@ -35,8 +37,9 @@ function decodeListCode(code: string): Task[] {
   ) as Task[];
 }
 
-export default function SettingsView() {
+export default function SettingsView({ onNavigate }: { onNavigate: (v: View) => void }) {
   const { tasks: allTasks, clearDone, importTasks } = useTaskStore();
+  const { save: saveSnapshot } = useSnapshots();
   const { showTimezones, localName, tz1Name, tz1Zone, tz2Name, tz2Zone, titleColor, keepKeywords, notificationsEnabled, repeatNotifHours, update } = useSettingsStore();
 
   const [hexInput, setHexInput] = useState(titleColor);
@@ -72,6 +75,17 @@ export default function SettingsView() {
   const clearAll = () => {
     const store = useTaskStore.getState();
     store.tasks.forEach((t) => store.deleteTask(t.id));
+  };
+
+  const [saveName, setSaveName] = useState("");
+  const [saved, setSaved] = useState(false);
+  const handleSaveCode = async () => {
+    if (!saveName.trim()) return;
+    const code = encodeListCode(useTaskStore.getState().tasks.filter((t) => !t.done));
+    await saveSnapshot(saveName.trim(), code);
+    setSaveName("");
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const [copied, setCopied] = useState(false);
@@ -275,13 +289,38 @@ export default function SettingsView() {
             {copied ? "Copied!" : "Copy list code"}
           </button>
 
+          <div className="text-xs text-vscode-muted mt-1">Save code</div>
+          <div className="flex gap-2">
+            <input
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSaveCode(); }}
+              placeholder="Name this list…"
+              className={`${inputCls} flex-1`}
+            />
+            <button
+              onClick={handleSaveCode}
+              disabled={!saveName.trim()}
+              className="text-xs px-3 py-1 rounded border border-vscode-accent text-vscode-accent hover:bg-vscode-accent hover:text-vscode-bg transition-colors disabled:opacity-40 disabled:pointer-events-none"
+            >
+              {saved ? "Saved!" : "Save"}
+            </button>
+          </div>
+
+          <button
+            onClick={() => onNavigate("lists")}
+            className="text-left text-sm text-vscode-accent hover:underline transition-colors py-0.5"
+          >
+            Browse saved lists →
+          </button>
+
           <div className="text-xs text-vscode-muted mt-1">Import list code</div>
           <textarea
             value={importCode}
             onChange={(e) => { setImportCode(e.target.value); setImportStage("idle"); }}
             placeholder="Paste list code here…"
             rows={3}
-            className="w-full bg-vscode-bg border border-vscode-border rounded px-2 py-1 text-xs text-vscode-text focus:border-vscode-accent focus:outline-none resize-none font-mono"
+            className="w-full bg-vscode-bg border border-neutral-600 rounded px-2 py-1 text-xs text-vscode-text focus:border-vscode-accent focus:outline-none resize-none font-mono"
           />
 
           {importStage === "idle" && (
