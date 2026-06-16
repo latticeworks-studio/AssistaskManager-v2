@@ -37,7 +37,7 @@ Navigate between views with the **☰** menu button at the top left.
 | View | What it's for |
 |---|---|
 | **Tasks** | Your main task list — add, complete, and manage tasks |
-| **Morning Standup** | One-tap summary of overdue, due today, and high-priority items — ready to paste into Slack or Teams |
+| **Morning Standup** | One-click summary of overdue, due today, and high-priority items — ready to paste into Slack or Teams |
 | **Completed** | Browse finished tasks and permanently delete them |
 | **Settings** | Timezone clocks, notifications, colors, data export |
 | **About** | Version info |
