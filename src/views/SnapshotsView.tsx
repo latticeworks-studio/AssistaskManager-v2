@@ -1,17 +1,7 @@
 import { useState } from "react";
 import { useSnapshots, Snapshot } from "../useSnapshots";
 import { useTaskStore, Task } from "../store";
-
-function decodeListCode(code: string): Task[] {
-  const bin = atob(code.trim());
-  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
-  const json = new TextDecoder().decode(bytes);
-  const data = JSON.parse(json);
-  if (!Array.isArray(data)) throw new Error("not an array");
-  return data.filter(
-    (t) => t.id && t.text && typeof t.done === "boolean" && t.priority && t.createdAt
-  ) as Task[];
-}
+import { decodeListCode } from "../listCode";
 
 function formatDate(ts: number) {
   return new Date(ts).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });

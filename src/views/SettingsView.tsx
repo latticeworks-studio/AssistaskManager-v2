@@ -3,6 +3,7 @@ import { useTaskStore, Task } from "../store";
 import { useSettingsStore, ALL_TIMEZONES } from "../settingsStore";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useSnapshots } from "../useSnapshots";
+import { encodeListCode, decodeListCode } from "../listCode";
 import { View } from "../App";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -19,23 +20,6 @@ const selectCls = "flex-1 bg-vscode-bg border border-neutral-600 rounded px-2 py
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
-function encodeListCode(tasks: Task[]): string {
-  const json = JSON.stringify(tasks);
-  const bytes = new TextEncoder().encode(json);
-  const bin = Array.from(bytes, (b) => String.fromCharCode(b)).join("");
-  return btoa(bin);
-}
-
-function decodeListCode(code: string): Task[] {
-  const bin = atob(code.trim());
-  const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
-  const json = new TextDecoder().decode(bytes);
-  const data = JSON.parse(json);
-  if (!Array.isArray(data)) throw new Error("not an array");
-  return data.filter(
-    (t) => t.id && t.text && typeof t.done === "boolean" && t.priority && t.createdAt
-  ) as Task[];
-}
 
 export default function SettingsView({ onNavigate }: { onNavigate: (v: View) => void }) {
   const { tasks: allTasks, clearDone, importTasks } = useTaskStore();
