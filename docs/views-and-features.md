@@ -86,3 +86,20 @@ Type `/vu` again to turn it off.
 ## Shiny Mode
 
 Type `/shiny` to toggle a rainbow wave animation across the ASSISTASK title. Type it again to return to the normal title color.
+
+---
+
+## My Lists
+
+Browse all named list snapshots you have saved. Access it from the **☰** menu.
+
+Each entry shows the snapshot name and the date it was saved. From here you can:
+
+- **Restore** — load the snapshot's tasks into Assistask. If you have existing tasks, you'll be prompted to choose:
+  - **Replace** — discard current tasks and load the snapshot
+  - **Append** — keep current tasks and merge in the snapshot's tasks. Tasks marked done locally that are active in the snapshot are restored to active.
+- **Delete** — permanently remove the snapshot (your current tasks are not affected)
+
+Snapshots are saved to disk and survive restarts, reboots, and WebView cache clears.
+
+To create a snapshot, go to **Settings → List Code → Save Code**. To transfer a list between devices without saving, use **Copy List Code** and **Import List Code** instead. See **[Settings](settings.md#list-code)** for details.

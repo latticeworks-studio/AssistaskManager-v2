@@ -71,3 +71,26 @@ Permanently removes all completed tasks. Active tasks are not affected.
 ### Clear All
 
 Permanently removes all tasks — active and completed. This cannot be undone. Export your data first if you need a record.
+
+---
+
+## List Code
+
+A portable string that encodes your active (non-completed) tasks. Use it to transfer your task list to another device or save snapshots you can restore later.
+
+### Copy List Code
+
+Encodes your current active tasks and copies the result to clipboard. Paste it anywhere — another device, a note, a message to yourself.
+
+### Save Code
+
+Give your current list a name and save it as a local snapshot. Saved snapshots appear in the **My Lists** view and persist across restarts and reboots.
+
+### Import List Code
+
+Paste a list code you previously copied. Click **Import** and choose how to apply it:
+
+- **Replace** — swap your current tasks entirely with the imported ones
+- **Append** — keep your current tasks and merge in the imported ones. Tasks that were marked done locally but are active in the imported code are restored to active.
+
+See **[Views & Features](views-and-features.md#my-lists)** for browsing and restoring saved snapshots.
