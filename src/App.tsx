@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useTaskStore, Priority, Task } from "./store";
 import { useNotifications } from "./useNotifications";
 import { parseTask, formatDetectedDate } from "./parseTask";
@@ -663,14 +664,34 @@ export default function App() {
             <span data-tauri-drag-region className="text-[10px] text-vscode-muted">to show / hide</span>
           </div>
         </div>
-        <div data-tauri-drag-region className="flex items-center gap-2 text-xs text-vscode-muted">
-          {overdueCount > 0 && <span data-tauri-drag-region className="text-vscode-red">{overdueCount} overdue</span>}
-          <span data-tauri-drag-region>{pending.length} pending</span>
-          {tasks.filter((t) => t.done && !t.hidden).length > 0 && (
-            <button onClick={hideDone} className="hover:text-vscode-text transition-colors">
-              clear done
+        <div className="flex items-center gap-2">
+          <div data-tauri-drag-region className="flex items-center gap-2 text-xs text-vscode-muted">
+            {overdueCount > 0 && <span data-tauri-drag-region className="text-vscode-red">{overdueCount} overdue</span>}
+            <span data-tauri-drag-region>{pending.length} pending</span>
+            {tasks.filter((t) => t.done && !t.hidden).length > 0 && (
+              <button onClick={hideDone} className="hover:text-vscode-text transition-colors">
+                clear done
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-0.5 ml-1">
+            <button
+              onClick={() => getCurrentWebviewWindow().minimize()}
+              className="w-5 h-5 flex items-center justify-center text-vscode-muted hover:text-vscode-text transition-colors"
+              title="Minimize"
+            >
+              <svg width="10" height="2" viewBox="0 0 10 2"><rect width="10" height="1.5" y="0.25" fill="currentColor"/></svg>
             </button>
-          )}
+            <button
+              onClick={() => getCurrentWebviewWindow().hide()}
+              className="w-5 h-5 flex items-center justify-center text-vscode-muted hover:text-vscode-red transition-colors"
+              title="Hide to tray"
+            >
+              <svg width="9" height="9" viewBox="0 0 9 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+                <line x1="1" y1="1" x2="8" y2="8"/><line x1="8" y1="1" x2="1" y2="8"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
