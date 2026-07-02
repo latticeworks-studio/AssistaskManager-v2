@@ -642,6 +642,7 @@ export default function App() {
             onClick={() => setMenuOpen((v) => !v)}
             className="text-vscode-muted hover:text-vscode-text transition-colors"
             aria-label="Open menu"
+            title="Menu (Ctrl+Shift+A to show / hide)"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <rect x="1" y="2.5" width="12" height="1.2" rx="0.6" fill="currentColor" />
@@ -649,20 +650,6 @@ export default function App() {
               <rect x="1" y="10.3" width="12" height="1.2" rx="0.6" fill="currentColor" />
             </svg>
           </button>
-          <div data-tauri-drag-region className="flex items-center gap-1">
-            <div data-tauri-drag-region className="flex items-center gap-0.5">
-              {["Ctrl", "Shift", "A"].map((k) => (
-                <span
-                  key={k}
-                  data-tauri-drag-region
-                  className="text-[10px] text-vscode-muted border border-vscode-border rounded px-1 py-px leading-none"
-                >
-                  {k}
-                </span>
-              ))}
-            </div>
-            <span data-tauri-drag-region className="text-[10px] text-vscode-muted">to show / hide</span>
-          </div>
         </div>
         <div className="flex items-center gap-2">
           <div data-tauri-drag-region className="flex items-center gap-2 text-xs text-vscode-muted">
